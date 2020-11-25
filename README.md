@@ -8,3 +8,4 @@ Git Folder description:
 - **PCB_Gerber_Files**: PCB Fabrication output. Pick and place not included
 - **PCB_Pdf**: PCB in pdf format for easy understanding
 
+![](Img/Nixies.gif)
