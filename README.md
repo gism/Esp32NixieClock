@@ -9,3 +9,9 @@ Git Folder description:
 - **PCB_Pdf**: PCB in pdf format for easy understanding
 
 ![](Img/Nixies.gif)
+
+
+![](Img/CAD_ALL.png)
+
+
+![](Img/CAD_ALL_2.png)
