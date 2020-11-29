@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>ESP Nixie Clock</title>
+	<link rel="stylesheet" href="css/styles.css">
+	<link rel="stylesheet" href="css/flipclock.css">
+	<script src="js/jquery.min.js"></script>
+	<script src="js/flipclock.js"></script>
+	<link rel="icon" href="img/favicon.png" type="image/png">
+</head>
+	<script>
+		var Socket;
+		console.log('Starting websocket at: ws://' + window.location.hostname + ':81/');
+		Socket=new WebSocket('ws://' + window.location.hostname + ':81/');
+		Socket.onmessage=function(evt){
+			console.log(evt.data);
+			
+			var obj = JSON.parse(evt.data);
+			if(obj.ID != null){
+				if(obj.ID == "debug"){
+					document.getElementById(obj.ID).innerHTML = document.getElementById(obj.ID).innerHTML + "\n" + obj.data;
+				}else if(obj.ID == "start"){
+					start();
+				}else if(obj.ID == "update_time"){
+					var s = obj.data.split(";");
+					changeTime(s[0], s[1], s[2])
+				}else{
+					document.getElementById(obj.ID).innerHTML = obj.data;
+				}
+			}
+		}
+		function sendCmd(cmd){
+			Socket.send(cmd);
+		}
+	</script>
+<body>
+	<header>
+		<h1>ESP Nixie Clock:</h1>
+	</header>
+
+	<div class="main_col">
+		<section>
+			<div class="col_fix">
+				<div class="clock"> </div>  <!-- Clock from: http://flipclockjs.com/ -->
+			</div>
+		</section>
+		
+		<section>
+			Digit control:
+			<div class="holder">
+				<div class="cent">
+					<div class="single_tap" onclick="manualChangeTime('h','+');sendCmd('H');">+</div>
+					<div class="single_tap" onclick="manualChangeTime('h','-');sendCmd('h');">-</div>
+					<div class="gap"></div>
+					<div class="single_tap" onclick="manualChangeTime('m','+');sendCmd('M');">+</div>
+					<div class="single_tap" onclick="manualChangeTime('m','-');sendCmd('m');">-</div>
+					<div class="gap"></div>
+					<div class="single_tap" onclick="manualChangeTime('s','+');sendCmd('S');">+</div>
+					<div class="single_tap" onclick="manualChangeTime('s','-');sendCmd('s');">-</div>
+				</div>
+			</div>
+		</section>
+		<section>
+			Tab grup:
+			<div class="holder">
+				<div class="cent">
+					<div class="doble_tap" onclick="start();">start()</div>
+					<div class="gap"></div>
+					<div class="doble_tap" onclick="stop();">stop()</div>
+					<div class="gap"></div>
+					<div class="doble_tap" onclick="setlocal();">set_local()</div>
+				</div>
+			</div>
+		</section>
+		<section>
+			Debug actions:
+			<div class="holder">
+					<ul>
+						<li class="tap" onclick="sendCmd('Wifi');"><a href="#">Get WiFi information</a></li>
+						<li class="tap" onclick="sendCmd('NTC');"><a href="#">Get time from NTC server</a></li>
+						<li class="tap"onclick="sendCmd('Hola');"><a href="#">Send websocket test packet (testing)</a></li>
+						<li class="tap" onclick="testDebug();"><a href="#">Insert new debug line (testing)</a></li>
+					</ul>
+			</div>
+		</section>
+
+		<section>
+			Debug print:
+			<div class="holder">
+				<div class="cent debug">
+					<p ID="debug">...</p>
+				</div>
+			</div>
+		</section>
+	</div>
+	<footer>
+		<p id="fw_id" style="display:inline;color:black">fw_id</p>
+		<p style="display:inline;color:black"> [v</p>
+		<p id="fw_vs" style="display:inline;color:black">fw_vs</p>
+		<p style="display:inline;color:black">] - CC BY-SA 2.0 @ </p>
+		<a id="ip_lnk" href="http://ip.io/" target="_blank">ip</a><br>
+		Code and info: <a href="https://github.com/gism/Esp32NixieClock">https://github.com/gism/Esp32NixieClock</a>
+	</footer>
+	<script type="text/javascript">
+		var clock;
+		$(document).ready(function() {
+			clock = $('.clock').FlipClock({
+				clockFace: 'TwentyFourHourClock'
+			});
+			clock.stop();
+			sendCmd('hola');
+		});
+		function stop() {
+			sendCmd('stop');
+			clock.stop();
+		}
+		function start() {
+			sendCmd('start');
+			clock.start();
+		}
+		function setlocal() {
+			var d = new Date();
+			clock.setTime(d);
+		}
+		function changeTime(h, m, s){
+			var n = new Date();
+			n.setHours(h);
+			n.setMinutes(m);
+			n.setSeconds(s);
+			clock.setTime(n);
+		}
+		function manualChangeTime(digit, sign) {
+			var d = new Date(clock.getTime().time);
+						
+			var value = 0;
+			switch(sign) {
+			  case '+':
+				value = 1;
+				break;
+			  case '-':
+				value = -1;
+				break;
+			  default:
+				console.log("Error: sign");
+			}
+			switch(digit) {
+			  case 'h':
+				d.setHours(d.getHours() + value);
+				d.setSeconds(d.getSeconds() - 1);
+				console.log("H");
+				break;
+			  case 'm':
+				d.setMinutes(d.getMinutes() + value);
+				d.setSeconds(d.getSeconds() - 1);
+				console.log("M");
+				break;
+			  case 's':
+				d.setSeconds(d.getSeconds() + value);
+				d.setSeconds(d.getSeconds() - 1);
+				console.log("S");
+				break;
+			  default:
+				console.log("Error: digit");
+			}
+			clock.setTime(d);
+		}			
+		function testDebug() {
+			document.getElementById("debug").innerHTML = document.getElementById("debug").innerHTML + "<BR>" + "TestLine";
+		}	
+
+		// Fill footer with firmware metadata
+		var c = new XMLHttpRequest();
+		c.open('GET', '/name');
+		c.onreadystatechange = function() {
+			var fw_id = document.getElementById('fw_id');
+			fw_id.innerHTML = c.responseText;
+		}
+		c.send();
+		var d = new XMLHttpRequest();
+		d.open('GET', '/version');
+		d.onreadystatechange = function() {
+			var fw_vs = document.getElementById('fw_vs');
+			fw_vs.innerHTML = d.responseText;
+		}
+		d.send();
+		var e = new XMLHttpRequest();
+		e.open('GET', '/ip');
+		e.onreadystatechange = function() {
+			var ip = e.responseText;
+			var l = ''
+			l = l.concat('http://', ip, '/');
+			var ip_lnk = document.getElementById('ip_lnk');
+			ip_lnk.setAttribute('href', l);
+			ip_lnk.innerHTML = l;
+		}
+		e.send();
+
+		
+	</script>
+</body>
+</html>

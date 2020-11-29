@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+	<script>
+		var Socket;
+		
+		Socket=new WebSocket('ws://' + window.location.hostname + ':81/');
+		Socket.onmessage=function(evt){
+			console.log(evt.data);
+			
+			var obj = JSON.parse(evt.data);
+			if(obj.ID != null){
+				document.getElementById(obj.ID).innerHTML = obj.data;
+			}
+		}
+		function sendCmd(cmd){
+			Socket.send(cmd);
+		}
+	</script>	
+<body>
+<p>Load image from ESP8266 Web server. Check index.html</p>
+<img src="img\fu.jpeg" alt="Image from ESP8266">
+</body>
+</html>
